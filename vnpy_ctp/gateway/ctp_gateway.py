@@ -3,6 +3,8 @@ from datetime import datetime
 from time import sleep
 from typing import Dict, List, Tuple
 from pathlib import Path
+import pandas as pd
+import csv
 
 from vnpy.event import EventEngine
 from vnpy.trader.constant import (
@@ -130,7 +132,7 @@ CHINA_TZ = ZoneInfo("Asia/Shanghai")       # 中国时区
 
 # 合约数据全局缓存字典
 symbol_contract_map: Dict[str, ContractData] = {}
-
+symbol_contract_origin_map: Dict[str, Dict] = {}
 
 class CtpGateway(BaseGateway):
     """
@@ -626,9 +628,14 @@ class CtpTdApi(TdApi):
 
             symbol_contract_map[contract.symbol] = contract
 
+            symbol_contract_origin_map[contract.symbol] = data
+
         if last:
             self.contract_inited = True
             self.gateway.write_log("合约信息查询成功")
+
+            # 合约查询成功后，把合约信息写入用户可读的文件，但系统不做读取
+            save_ctp_contracts_details_to_csv()
 
             for data in self.order_data:
                 self.onRtnOrder(data)
@@ -864,3 +871,12 @@ def adjust_price(price: float) -> float:
     if price == MAX_FLOAT:
         price = 0
     return price
+
+def save_ctp_contracts_details_to_csv() -> None:
+    """保存ctp的合约信息文件夹,用户可读,但这个csv文件,不读回系统"""
+    folder_path = str(get_folder_path("contracts_info"))
+    contracts_info_filepath: str = folder_path + "\\ctp_contracts_info.csv"
+    
+    # 把字典转成 dataframe，然后保存
+    df_symbol_info = pd.DataFrame.from_dict(symbol_contract_origin_map, orient='index')
+    df_symbol_info.to_csv(contracts_info_filepath, header=True, index=False,quoting=csv.QUOTE_MINIMAL, escapechar=',',encoding="GBK")
