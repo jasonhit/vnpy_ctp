@@ -637,6 +637,7 @@ class CtpTdApi(TdApi):
             # 合约查询成功后，把合约信息写入用户可读的文件，但系统不做读取
             save_ctp_contracts_details_to_csv()
 
+            # 合约查询成功后，再向上给出order和trade的推送
             for data in self.order_data:
                 self.onRtnOrder(data)
             self.order_data.clear()
